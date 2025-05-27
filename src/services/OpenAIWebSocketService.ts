@@ -426,10 +426,8 @@ export class OpenAIWebSocketService {
         },
 
         turn_detection: {
-          type: "server_vad", // 서버 기반 음성 활동 감지
-          threshold: 0.2, // 음성 감지 임계값 (0.0-1.0)
-          prefix_padding_ms: 300, // 음성 시작 전 패딩 (300ms)
-          silence_duration_ms: 400, // 침묵 지속 시간 (500ms 후 자동 중지)
+          type: "semantic_vad", // server_vad 대신
+          eagerness: "medium", // auto, low, medium, high
           create_response: true, // 자동 응답 생성
           interrupt_response: true, // 응답 중단 허용
         },
