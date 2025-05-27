@@ -1,24 +1,241 @@
-#root {
-  max-width: 1280px;
+/* 전체 앱 스타일 */
+.app {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  padding: 20px;
+}
+
+.container {
+  max-width: 800px;
   margin: 0 auto;
-  padding: 2rem;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* 헤더 스타일 */
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30px;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.header h1 {
+  margin: 0 0 10px 0;
+  font-size: 2.5em;
+  font-weight: 300;
 }
 
-@keyframes logo-spin {
+.header p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 1.1em;
+}
+
+/* 음성 시각화 영역 */
+.voice-visualizer {
+  padding: 40px;
+  text-align: center;
+  background: #f8f9fa;
+}
+
+.microphone {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.mic-icon {
+  font-size: 4em;
+  padding: 30px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.microphone.listening .mic-icon {
+  background: #ff6b6b;
+  color: white;
+  transform: scale(1.1);
+  animation: pulse 1.5s infinite;
+}
+
+.microphone.processing .mic-icon {
+  background: #4ecdc4;
+  color: white;
+  animation: spin 2s linear infinite;
+}
+
+/* 음성 파형 애니메이션 */
+.sound-waves {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 5px;
+}
+
+.wave {
+  width: 4px;
+  height: 20px;
+  background: #ff6b6b;
+  border-radius: 2px;
+  animation: wave 1s ease-in-out infinite;
+}
+
+.wave:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.wave:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+/* 인식 중인 텍스트 */
+.transcript {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.transcript p {
+  margin: 0;
+  font-style: italic;
+  color: #666;
+}
+
+/* 컨트롤 버튼 */
+.controls {
+  padding: 20px 40px;
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.mic-button,
+.clear-button {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mic-button {
+  background: #667eea;
+  color: white;
+}
+
+.mic-button:hover {
+  background: #5a6fd8;
+  transform: translateY(-2px);
+}
+
+.mic-button.active {
+  background: #ff6b6b;
+}
+
+.clear-button {
+  background: #f1f3f4;
+  color: #666;
+}
+
+.clear-button:hover {
+  background: #e8eaed;
+}
+
+.mic-button:disabled,
+.clear-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 상태 표시 */
+.status {
+  padding: 0 40px 20px;
+  text-align: center;
+}
+
+.status-listening {
+  color: #ff6b6b;
+  font-weight: 600;
+  animation: blink 1s infinite;
+}
+
+.status-processing {
+  color: #4ecdc4;
+  font-weight: 600;
+}
+
+/* 대화 기록 */
+.messages {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 20px 40px 40px;
+}
+
+.message {
+  margin-bottom: 20px;
+}
+
+.message-content {
+  padding: 15px 20px;
+  border-radius: 15px;
+  position: relative;
+}
+
+.message.user .message-content {
+  background: #667eea;
+  color: white;
+  margin-left: 20%;
+}
+
+.message.assistant .message-content {
+  background: #f1f3f4;
+  color: #333;
+  margin-right: 20%;
+}
+
+.role {
+  font-weight: 600;
+  font-size: 0.9em;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.message p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.timestamp {
+  font-size: 0.8em;
+  opacity: 0.7;
+  display: block;
+  margin-top: 5px;
+}
+
+/* 애니메이션 */
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1.1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+@keyframes spin {
   from {
     transform: rotate(0deg);
   }
@@ -27,16 +244,55 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@keyframes wave {
+  0%,
+  100% {
+    height: 20px;
+  }
+  50% {
+    height: 40px;
   }
 }
 
-.card {
-  padding: 2em;
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-.read-the-docs {
-  color: #888;
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .container {
+    margin: 10px;
+    border-radius: 15px;
+  }
+
+  .header h1 {
+    font-size: 2em;
+  }
+
+  .voice-visualizer {
+    padding: 30px 20px;
+  }
+
+  .controls {
+    padding: 20px;
+    flex-direction: column;
+  }
+
+  .messages {
+    padding: 20px;
+  }
+
+  .message.user .message-content {
+    margin-left: 10%;
+  }
+
+  .message.assistant .message-content {
+    margin-right: 10%;
+  }
 }

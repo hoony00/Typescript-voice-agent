@@ -1,7 +1,38 @@
+// tsconfig.json의 역할
+// 컴파일 설정 중앙화: TypeScript를 JavaScript로 변환할 때 필요한 모든 설정을 한 곳에서 관리합니다.
+
+// 프로젝트 루트 식별: 이 파일이 있는 디렉토리가 TypeScript 프로젝트의 루트가 됩니다.
+
+// IDE 지원: VS Code 등의 에디터가 TypeScript 프로젝트임을 인식하고 적절한 지원을 제공합니다.
+
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    /* Project References - 추가된 부분 */
+    "composite": true,
+    "declaration": true
+  },
+  "include": ["src"]
 }
