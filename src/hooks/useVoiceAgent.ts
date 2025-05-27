@@ -121,12 +121,8 @@ export const useVoiceAgent = () => {
         console.log("🛑 OpenAI가 음성 종료를 감지했습니다!");
         updateAppState({ isListening: false });
 
-        // 자동으로 녹음 중지
-        if (
-          audioServiceRef.current &&
-          audioServiceRef.current.getRecordingStatus()
-        ) {
-          console.log("⏹️ 자동으로 녹음 중지");
+        // 🎯 핵심: 녹음 중지 + 버퍼 커밋 + 응답 요청
+        if (audioServiceRef.current?.getRecordingStatus()) {
           audioServiceRef.current.stopStreaming();
           setIsRecordingState(false);
         }
@@ -134,6 +130,12 @@ export const useVoiceAgent = () => {
         // 오디오 버퍼 커밋
         wsServiceRef.current?.commitAudioBuffer();
         console.log("📝 음성 인식 처리 시작...");
+
+        // 🆕 강제 응답 생성 요청
+        setTimeout(() => {
+          console.log("🤖 응답 생성 강제 요청");
+          wsServiceRef.current?.createResponse();
+        }, 200);
       },
 
       committed: () => {
@@ -200,6 +202,7 @@ export const useVoiceAgent = () => {
         updateAppState({ connectionStatus: "disconnected" });
       },
     }),
+
     [updateAppState, addMessage, updateLastAssistantMessage]
   );
 
@@ -232,6 +235,13 @@ export const useVoiceAgent = () => {
     const initialize = async () => {
       try {
         console.log("🚀 VoiceAgent 초기화 시작");
+
+        console.log("🌐 브라우저 환경:", {
+          userAgent: navigator.userAgent,
+          audioContext: !!window.AudioContext,
+          mediaRecorder: !!window.MediaRecorder,
+        });
+
         updateAppState({ connectionStatus: "connecting", error: null });
 
         // 오디오 서비스 초기화

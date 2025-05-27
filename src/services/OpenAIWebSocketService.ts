@@ -214,6 +214,8 @@ export class OpenAIWebSocketService {
 
     // === 메시지 수신 이벤트 ===
     this.ws.onmessage = (event) => {
+      console.log("📥 OpenAI WebSocket 메시지 수신:", event.data);
+
       this.handleMessage(event.data);
     };
 
@@ -315,6 +317,7 @@ export class OpenAIWebSocketService {
    */
   // 20개의 개별 이벤트를 분기 !! 중요
   private routeEventToHandler(eventType: string, data: JsonObject): void {
+    console.log("🔄 기본 이벤트 처리:", data);
     switch (eventType) {
       // === 세션 관련 이벤트 ===
       case "session.created":
@@ -424,9 +427,11 @@ export class OpenAIWebSocketService {
 
         turn_detection: {
           type: "server_vad", // 서버 기반 음성 활동 감지
-          threshold: 0.5, // 음성 감지 임계값 (0.0-1.0)
+          threshold: 0.2, // 음성 감지 임계값 (0.0-1.0)
           prefix_padding_ms: 300, // 음성 시작 전 패딩 (300ms)
-          silence_duration_ms: 500, // 침묵 지속 시간 (500ms 후 자동 중지)
+          silence_duration_ms: 400, // 침묵 지속 시간 (500ms 후 자동 중지)
+          create_response: true, // 자동 응답 생성
+          interrupt_response: true, // 응답 중단 허용
         },
         temperature: this.config.temperature || 0.8,
         max_response_output_tokens: this.config.maxResponseTokens || 4096,

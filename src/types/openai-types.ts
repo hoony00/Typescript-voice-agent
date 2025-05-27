@@ -94,6 +94,7 @@ export interface SessionConfig {
   input_audio_transcription?: {
     /** 전사 모델 (whisper-1) */
     model: "whisper-1";
+    language: "ko"; // 한국어
   };
   /** 음성 활동 감지 설정 (선택사항) */
   turn_detection?: {

@@ -52,6 +52,8 @@ interface BrowserSupport {
  * OpenAI Realtime API와 호환되는 PCM16 형식을 지원
  */
 export class AudioService {
+  private onAudioDataCallback: ((audioData: string) => void) | null = null;
+
   // === 프라이빗 속성들 ===
   private mediaRecorder: MediaRecorder | null = null; // 미디어 녹음기
   private audioContext: AudioContext | null = null; // 오디오 컨텍스트
@@ -64,8 +66,8 @@ export class AudioService {
   // === 오디오 설정 상수들 ===
   private readonly SAMPLE_RATE = 24000; // OpenAI 권장 샘플레이트
   private readonly CHANNEL_COUNT = 1; // 모노 채널
-  private readonly AUDIO_BITS_PER_SECOND = 24000; // 비트레이트
   private readonly CHUNK_DURATION = 1000; // 데이터 수집 간격 (1초)
+  private readonly AUDIO_BITS_PER_SECOND = 24000; // 비트레이트
 
   // 로그 출력 빈도 제어
   private logCounter = 0;
@@ -225,19 +227,31 @@ export class AudioService {
    * @returns MediaRecorderOptions - 최적화된 녹음 옵션
    */
   private createMediaRecorderOptions(): MediaRecorderOptions {
-    const mimeType = this.getSupportedMimeType();
+    console.log("🔍 지원되는 MIME 타입 검색 중...");
 
-    const options: MediaRecorderOptions = {
-      audioBitsPerSecond: this.AUDIO_BITS_PER_SECOND,
-    };
+    for (const mimeType of this.SUPPORTED_MIME_TYPES) {
+      if (MediaRecorder.isTypeSupported(mimeType)) {
+        console.log("✅ 지원되는 MIME 타입 발견:", mimeType);
 
-    // 지원되는 MIME 타입이 있는 경우에만 설정
-    if (mimeType) {
-      options.mimeType = mimeType;
+        const options: MediaRecorderOptions = {
+          mimeType,
+          audioBitsPerSecond: this.AUDIO_BITS_PER_SECOND,
+        };
+
+        // 🆕 상세 설정 로그
+        console.log("⚙️ MediaRecorder 상세 설정:", {
+          mimeType,
+          audioBitsPerSecond: this.AUDIO_BITS_PER_SECOND,
+          expectedFormat: "WebM/Opus → PCM16",
+          targetSampleRate: this.SAMPLE_RATE,
+          targetChannels: this.CHANNEL_COUNT,
+        });
+
+        return options;
+      }
     }
 
-    console.log("⚙️ MediaRecorder 옵션:", options);
-    return options;
+    throw new Error("지원되는 오디오 형식을 찾을 수 없습니다.");
   }
 
   // ============================================================================
@@ -266,6 +280,9 @@ export class AudioService {
     try {
       console.log("🎙️ 실시간 오디오 스트리밍 시작...");
 
+      // 🆕 콜백 함수 저장
+      this.onAudioDataCallback = onAudioData;
+
       // MediaRecorder 생성 및 설정
       const options = this.createMediaRecorderOptions();
       this.mediaRecorder = new MediaRecorder(this.stream, options);
@@ -274,51 +291,36 @@ export class AudioService {
 
       // === 이벤트 핸들러 설정 ===
 
-      // 오디오 데이터 수집 (청크 저장 방식)
-      this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
+      // 🆕 실시간 오디오 데이터 처리
+      this.mediaRecorder.ondataavailable = async (event: BlobEvent) => {
         if (event.data.size > 0 && this.isStreamingActive) {
           this.audioChunks.push(event.data);
           console.log(
             `📦 오디오 청크 수집: ${event.data.size} bytes (총 ${this.audioChunks.length}개)`
           );
-        }
-      };
 
-      // 녹음 중지 시 PCM16 변환 및 전송
-      this.mediaRecorder.onstop = async () => {
-        if (this.audioChunks.length > 0 && this.isStreamingActive) {
           try {
-            console.log("🔄 오디오 청크 병합 및 PCM16 변환 시작");
-
-            // 모든 청크를 하나의 Blob으로 합치기
-            const completeAudioBlob = new Blob(this.audioChunks, {
-              type: this.getSupportedMimeType(),
-            });
-
-            // ArrayBuffer로 변환
-            const audioBuffer = await completeAudioBlob.arrayBuffer();
-
-            // PCM16으로 변환
+            // 🎯 즉시 PCM16 변환 및 전송
+            const audioBuffer = await event.data.arrayBuffer();
             const pcm16Data = await this.convertToPCM16(audioBuffer);
 
             if (pcm16Data.byteLength > 0) {
               const base64Audio = this.arrayBufferToBase64(pcm16Data);
-              console.log(
-                `✅ PCM16 변환 완료: ${pcm16Data.byteLength} bytes → ${base64Audio.length} chars`
-              );
+              console.log(`🚀 실시간 OpenAI 전송: ${base64Audio.length} chars`);
 
-              // 📤 출력: Base64 PCM16 (OpenAI로 전송)
-              onAudioData(base64Audio);
-            } else {
-              console.warn("⚠️ PCM16 변환 결과가 비어있음");
+              // 실시간 WebSocket 전송!
+              this.onAudioDataCallback?.(base64Audio);
             }
           } catch (error) {
-            console.error("❌ 오디오 처리 실패:", error);
+            console.error("❌ 실시간 변환 실패:", error);
           }
         }
+      };
 
-        // 청크 배열 초기화
-        this.audioChunks = [];
+      // 녹음 중지 시 처리 (기존 로직 유지)
+      this.mediaRecorder.onstop = async () => {
+        console.log("⏹️ 청크 녹음 중지, 다음 청크 준비 중...");
+        this.audioChunks = []; // 청크 배열 초기화
         this.isRecording = false;
 
         // 연속 스트리밍을 위해 다시 시작
@@ -349,11 +351,11 @@ export class AudioService {
         this.isStreamingActive = false;
       };
 
-      // 녹음 시작 (1초 간격으로 완전한 오디오 세그먼트 생성)
+      // 녹음 시작 (1초 간격으로 실시간 전송)
       this.mediaRecorder.start(this.CHUNK_DURATION);
 
       console.log(
-        `✅ 오디오 스트리밍 시작 완료 (${this.CHUNK_DURATION}ms 간격)`
+        `✅ 실시간 오디오 스트리밍 시작 완료 (${this.CHUNK_DURATION}ms 간격)`
       );
     } catch (error) {
       console.error("❌ 오디오 스트리밍 시작 실패:", error);
@@ -362,7 +364,6 @@ export class AudioService {
       throw error;
     }
   }
-
   /**
    * 오디오 스트리밍 중지
    */
@@ -427,18 +428,43 @@ export class AudioService {
    * @returns ArrayBuffer - 완전한 WAV 파일
    */
   private createWavFile(audioBuffer: ArrayBuffer): ArrayBuffer {
-    const wavHeader = this.createWavHeader(audioBuffer.byteLength);
-    const wavFile = new ArrayBuffer(
-      wavHeader.byteLength + audioBuffer.byteLength
-    );
+    console.log("🔧 WAV 헤더 생성 중...", {
+      inputSize: audioBuffer.byteLength,
+      inputType: "WebM/Opus",
+    });
 
-    // 헤더 복사
-    new Uint8Array(wavFile).set(new Uint8Array(wavHeader), 0);
-    // 오디오 데이터 복사
-    new Uint8Array(wavFile).set(
-      new Uint8Array(audioBuffer),
-      wavHeader.byteLength
-    );
+    const header = new ArrayBuffer(44);
+    const view = new DataView(header);
+
+    // RIFF chunk descriptor
+    view.setUint32(0, 0x46464952, true); // "RIFF"
+    view.setUint32(4, audioBuffer.byteLength + 44 - 8, true); // file size
+    view.setUint32(8, 0x45564157, true); // "WAVE"
+
+    // fmt subchunk
+    view.setUint32(12, 0x20746d66, true); // "fmt "
+    view.setUint32(16, 16, true); // subchunk size
+    view.setUint16(20, 1, true); // audio format (PCM)
+    view.setUint16(22, 1, true); // num channels (mono)
+    view.setUint32(24, this.SAMPLE_RATE, true); // sample rate
+    view.setUint32(28, this.SAMPLE_RATE * 2, true); // byte rate
+    view.setUint16(32, 2, true); // block align
+    view.setUint16(34, 16, true); // bits per sample
+
+    // data subchunk
+    view.setUint32(36, 0x61746164, true); // "data"
+    view.setUint32(40, audioBuffer.byteLength, true); // data size
+
+    // 헤더와 데이터 결합
+    const wavFile = new ArrayBuffer(44 + audioBuffer.byteLength);
+    new Uint8Array(wavFile).set(new Uint8Array(header), 0);
+    new Uint8Array(wavFile).set(new Uint8Array(audioBuffer), 44);
+
+    console.log("✅ WAV 파일 생성 완료:", {
+      totalSize: wavFile.byteLength,
+      headerSize: 44,
+      dataSize: audioBuffer.byteLength,
+    });
 
     return wavFile;
   }
@@ -466,6 +492,17 @@ export class AudioService {
 
     try {
       console.log("🔄 PCM16 변환 시작...");
+
+      // 🆕 오디오 데이터 상세 분석
+      console.log("📊 오디오 데이터 분석:", {
+        byteLength: audioBuffer.byteLength,
+        firstBytes: Array.from(new Uint8Array(audioBuffer.slice(0, 16)))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join(" "),
+        lastBytes: Array.from(new Uint8Array(audioBuffer.slice(-16)))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join(" "),
+      });
 
       // 방법 1: 직접 디코딩 시도
       let decodedAudio: AudioBuffer;
@@ -745,6 +782,9 @@ export class AudioService {
 
       // 2. 재생 중지
       this.stopPlayback();
+
+      // 🆕 콜백 정리 추가
+      this.onAudioDataCallback = null;
 
       // 3. 미디어 스트림 해제
       if (this.stream) {
