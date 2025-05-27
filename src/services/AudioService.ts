@@ -22,9 +22,9 @@ interface MediaRecorderErrorEvent extends Event {
 }
 
 /**
- * 오디오 설정 인터페이스
+ * 오디오 설정 인터페이스 (브라우저 AudioContext 및 MediaRecorder 최적화)
  */
-interface AudioConfig {
+interface BrowserAudioConfig {
   sampleRate: number; // 샘플링 레이트 (Hz)
   channelCount: number; // 채널 수 (1: 모노, 2: 스테레오)
   echoCancellation: boolean; // 에코 제거
@@ -64,8 +64,8 @@ export class AudioService {
   // === 오디오 설정 상수들 ===
   private readonly SAMPLE_RATE = 24000; // OpenAI 권장 샘플레이트
   private readonly CHANNEL_COUNT = 1; // 모노 채널
-  private readonly CHUNK_DURATION = 1000; // 데이터 수집 간격 (1초)
   private readonly AUDIO_BITS_PER_SECOND = 24000; // 비트레이트
+  private readonly CHUNK_DURATION = 1000; // 데이터 수집 간격 (1초)
 
   // 로그 출력 빈도 제어
   private logCounter = 0;
@@ -131,7 +131,7 @@ export class AudioService {
       console.log("🎤 마이크 권한 요청 중...");
 
       // 오디오 제약 조건 설정 (OpenAI Realtime API 최적화)
-      const audioConfig: AudioConfig = {
+      const audioConfig: BrowserAudioConfig = {
         sampleRate: this.SAMPLE_RATE,
         channelCount: this.CHANNEL_COUNT,
         echoCancellation: true, // 에코 제거로 음성 품질 향상
@@ -246,6 +246,7 @@ export class AudioService {
 
   /**
    * 실시간 오디오 스트리밍 시작 (OpenAI PCM16 호환)
+   * // 🎤 입력: 브라우저 마이크 (WebM/Opus)
    * @param onAudioData - 오디오 데이터 콜백 함수 (Base64 PCM16 형식)
    */
   startStreaming(onAudioData: (audioData: string) => void): void {
@@ -305,6 +306,8 @@ export class AudioService {
               console.log(
                 `✅ PCM16 변환 완료: ${pcm16Data.byteLength} bytes → ${base64Audio.length} chars`
               );
+
+              // 📤 출력: Base64 PCM16 (OpenAI로 전송)
               onAudioData(base64Audio);
             } else {
               console.warn("⚠️ PCM16 변환 결과가 비어있음");
@@ -442,6 +445,7 @@ export class AudioService {
 
   /**
    * WebM/Opus 오디오를 PCM16 형식으로 변환 (OpenAI 호환)
+   * // 🔄 변환: WebM → PCM16 (OpenAI 호환 형식)
    * @param audioBuffer - 원본 오디오 데이터 (ArrayBuffer)
    * @returns Promise<ArrayBuffer> - PCM16 형식의 오디오 데이터
    */
@@ -470,7 +474,10 @@ export class AudioService {
           audioBuffer.slice(0)
         );
       } catch (directError) {
-        console.log("⚠️ 직접 디코딩 실패, WAV 헤더 추가 시도");
+        console.log(
+          "⚠️ 직접 디코딩 실패, WAV 헤더 추가 시도 중... ",
+          directError
+        );
 
         // 방법 2: WAV 헤더 추가 후 디코딩
         const wavFile = this.createWavFile(audioBuffer);
@@ -572,6 +579,10 @@ export class AudioService {
         try {
           this.currentSource.stop();
         } catch (error) {
+          console.warn(
+            "⚠️ 현재 재생 중인 오디오가 이미 중지되었습니다:",
+            error
+          );
           // 이미 중지된 경우 무시
         }
       }

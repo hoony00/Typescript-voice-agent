@@ -313,6 +313,7 @@ export class OpenAIWebSocketService {
    * @param eventType - 이벤트 타입
    * @param data - 이벤트 데이터
    */
+  // 20개의 개별 이벤트를 분기 !! 중요
   private routeEventToHandler(eventType: string, data: JsonObject): void {
     switch (eventType) {
       // === 세션 관련 이벤트 ===
@@ -413,20 +414,22 @@ export class OpenAIWebSocketService {
         instructions:
           "당신은 친근하고 도움이 되는 한국어 음성 카페 직원입니다. 간결하고 자연스럽게 대답해주세요" +
           "만약 카페 주문외의 다른 질문이 들어오면 간단하게 처리 후, 다시 카페 주문으로 돌아가세요.",
-        voice: this.config.voice!,
-        input_audio_format: this.config.inputAudioFormat!,
-        output_audio_format: this.config.outputAudioFormat!,
+        voice: this.config.voice || "alloy",
+        input_audio_format: this.config.inputAudioFormat || "pcm16",
+        output_audio_format: this.config.outputAudioFormat || "pcm16",
+
         input_audio_transcription: {
           model: "whisper-1",
         },
+
         turn_detection: {
-          type: "server_vad",
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 200,
+          type: "server_vad", // 서버 기반 음성 활동 감지
+          threshold: 0.5, // 음성 감지 임계값 (0.0-1.0)
+          prefix_padding_ms: 300, // 음성 시작 전 패딩 (300ms)
+          silence_duration_ms: 500, // 침묵 지속 시간 (500ms 후 자동 중지)
         },
-        temperature: this.config.temperature!,
-        max_response_output_tokens: this.config.maxResponseTokens!,
+        temperature: this.config.temperature || 0.8,
+        max_response_output_tokens: this.config.maxResponseTokens || 4096,
       },
     };
 

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { OpenAIWebSocketService } from "../services/OpenAIWebSocketService";
 import { AudioService } from "../services/AudioService";
-// 타입 임포트 수정
+
 import type {
   ConnectionStatus,
   OpenAIEventHandlers,
@@ -113,14 +113,31 @@ export const useVoiceAgent = () => {
       },
 
       speechStarted: () => {
-        console.log("🎤 음성 감지 시작");
+        console.log("🎤 OpenAI가 음성을 감지했습니다!");
         updateAppState({ isListening: true });
       },
 
       speechStopped: () => {
-        console.log("🛑 음성 감지 중지");
+        console.log("🛑 OpenAI가 음성 종료를 감지했습니다!");
         updateAppState({ isListening: false });
+
+        // 자동으로 녹음 중지
+        if (
+          audioServiceRef.current &&
+          audioServiceRef.current.getRecordingStatus()
+        ) {
+          console.log("⏹️ 자동으로 녹음 중지");
+          audioServiceRef.current.stopStreaming();
+          setIsRecordingState(false);
+        }
+
+        // 오디오 버퍼 커밋
         wsServiceRef.current?.commitAudioBuffer();
+        console.log("📝 음성 인식 처리 시작...");
+      },
+
+      committed: () => {
+        console.log("✅ 오디오 버퍼가 커밋되었습니다. 음성 인식 중...");
       },
 
       inputAudioTranscriptionDelta: (data: JsonObject) => {

@@ -4,7 +4,8 @@
  * ============================================================================
  *
  * 역할: TypeScript 타입 정의 및 인터페이스 관리
- *
+ *  1. 기본 JSON 타입 → 2. 오디오 → 3. 세션 → 4. 이벤트 → 5. 설정 → 6. 유틸리티
+
  * 주요 기능:
  * - JsonValue 타입: OpenAI API 응답 데이터의 기본 타입 정의
  * - JsonObject 인터페이스: JSON 객체 구조 타입 정의
@@ -36,7 +37,6 @@ export type JsonValue =
   | number
   | boolean
   | null
-  | undefined
   | JsonObject
   | JsonArray;
 
@@ -63,12 +63,12 @@ export type JsonArray = Array<JsonValue>;
  * 브라우저 AudioContext 및 MediaRecorder 설정에 사용
  */
 export interface AudioConfig {
-  /** 샘플링 레이트 (Hz) - OpenAI 권장: 24000 */
-  sampleRate: number;
-  /** 채널 수 (1: 모노, 2: 스테레오) */
-  channels: number;
-  /** 비트 깊이 (8, 16, 24, 32) */
-  bitsPerSample: number;
+  /** OpenAI 지원 샘플레이트: 8000, 16000, 24000, 48000 */
+  sampleRate: 8000 | 16000 | 24000 | 48000;
+  /** 채널 수: 1(모노) 또는 2(스테레오) */
+  channels: 1 | 2;
+  /** 비트 깊이: OpenAI는 16비트만 지원 */
+  bitsPerSample: 16;
 }
 
 // ============================================================================
@@ -116,22 +116,26 @@ export interface SessionConfig {
  * 대화 아이템 구조 정의
  * 사용자와 AI 간의 개별 메시지 단위
  */
+// 현재 코드의 content 부분을 더 구체화
 export interface ConversationItem {
-  /** 고유 식별자 */
   id: string;
-  /** 아이템 타입 (message, function_call, function_call_output) */
   type: "message" | "function_call" | "function_call_output";
-  /** 역할 (user, assistant, system) */
-  role: "user" | "assistant" | "system";
-  /** 메시지 내용 배열 */
-  content: Array<{
-    /** 콘텐츠 타입 (text, audio) */
-    type: "text" | "audio";
-    /** 텍스트 내용 (선택사항) */
-    text?: string;
-    /** 오디오 데이터 Base64 (선택사항) */
-    audio?: string;
-  }>;
+  role: MessageRole;
+  content: MessageContent[];
+}
+
+// 새로운 타입 추가
+export type MessageContent = TextContent | AudioContent;
+
+export interface TextContent {
+  type: "text";
+  text: string;
+}
+
+export interface AudioContent {
+  type: "audio";
+  audio: string; // Base64 encoded
+  transcript?: string; // 선택적 전사 텍스트
 }
 
 // ============================================================================
