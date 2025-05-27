@@ -136,7 +136,13 @@ export const useVoiceAgent = () => {
       inputAudioTranscriptionCompleted: (data: JsonObject) => {
         const transcript = data.transcript as string;
         if (transcript?.trim()) {
-          console.log("🗣️ 음성 인식 완료:", transcript);
+          console.log("🎉 음성 인식 완료!");
+          console.log("👤 사용자가 말한 내용:", `"${transcript}"`);
+          console.log("📏 인식된 텍스트 길이:", transcript.length, "글자");
+          console.log(
+            "🔤 인식된 언어:",
+            transcript.match(/[가-힣]/) ? "한국어 포함" : "영어/기타"
+          );
           addMessage("user", transcript);
           updateAppState({
             currentTranscript: "",
